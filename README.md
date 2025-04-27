@@ -1,3 +1,5 @@
+This is a refactor of a
+
 # Flask Microservice Demo
 
 This project is an example of using nothing but python3, flask, requests, and docker to make a complete microservice architecture implementation.  Yes, it passes JSON around in between the microservices, which is arguably not a great idea, but it's hard to argue with how easy these are to spin up.
@@ -115,3 +117,46 @@ POST http://localhost:5001/custSearch
 *Note the port of the orders microservice here! This isn't the backend!*
 
 Make sure to use a POST and to set "Content-Type: application/json" in the "headers" and to put something like `{"name": "Daniel"}` in the "body".  You'll get a list of order where the "cust" field contains the search parameter. The customer names are randomly generated, so you might want to try something simple.
+
+## Refactorización
+
+Esta sección describe las modificaciones realizadas o propuestas para habilitar el acceso seguro (HTTPS) a los microservicios, utilizando un proxy inverso.
+
+Anteriormente, los servicios se comunicaban y eran accesibles a través de HTTP. Para añadir una capa de seguridad y permitir el tráfico cifrado, se ha implementado el uso de un proxy inverso (ej. Nginx) para manejar las conexiones HTTPS externas.
+
+Los principales cambios incluyen:
+
+1.  **Configuración de Proxy Inverso (Nginx):** Se propone añadir un servicio de proxy inverso (como Nginx) para que actúe como punto de entrada para las conexiones externas. Este proxy escuchará en el puerto estándar HTTPS (443) y reenviará las solicitudes a los servicios Flask apropiados dentro de la red Docker a través de HTTP.
+    * Se requiere un archivo de configuración para Nginx (`nginx.conf`) que defina cómo manejar las conexiones SSL y cómo dirigir el tráfico a los servicios backend.
+
+2.  **Certificados SSL:** Para habilitar HTTPS, se necesitan certificados SSL (un certificado y una clave privada).
+    * Para desarrollo, se pueden generar certificados autofirmados utilizando herramientas como OpenSSL con un comando similar a:
+        ```bash
+        openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout private.key -out certificate.crt
+        ```
+        Se recomienda usar `localhost` como el Common Name (CN) del certificado para pruebas locales.
+    * Para entornos de producción, se deben obtener certificados de una Autoridad Certificadora (CA) de confianza.
+
+3.  **Actualización de `docker-compose.yml`:** Se ha modificado el archivo `docker-compose.yml` para incluir el nuevo servicio del proxy inverso.
+    * Se mapean los puertos 80 (opcional, para redirigir HTTP a HTTPS) y 443 del host al contenedor del proxy.
+    * Se montan los archivos de configuración de Nginx y el directorio que contiene los certificados SSL en el contenedor del proxy.
+    * Se establece una dependencia para asegurar que el servicio backend esté corriendo antes de que se inicie el proxy.
+
+4.  **Estructura de Archivos:** Se añade una carpeta `certs` (al mismo nivel que `docker-compose.yml`) para almacenar los archivos `certificate.crt` y `private.key`. El archivo `nginx.conf` también se coloca en la raíz del proyecto.
+
+### Acceso a Endpoints mediante GET
+
+Una vez que los servicios están en funcionamiento (y el proxy inverso está configurado si se usa HTTPS), se puede acceder a la información utilizando solicitudes HTTP GET estándar a los siguientes endpoints. Se proporcionan ejemplos asumiendo el acceso a través de HTTPS en `https://localhost` (si se utiliza el proxy inverso):
+
+* **Buscar clientes por nombre (ej. "Dan"):**
+    `https://localhost/custSearch/Dan`
+
+* **Obtener una lista de pedidos (ej. 5 pedidos):**
+    `https://localhost/orders?count=5`
+    (Nota: El parámetro para especificar el número de pedidos es `count`.)
+
+* **Obtener detalles para un pedido específico (ej. ID de Pedido 4):**
+    `https://localhost/detail/4`
+
+* **Obtener detalles para otro pedido específico (ej. ID de Pedido 5):**
+    `https://localhost/detail/5`
