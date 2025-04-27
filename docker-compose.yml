@@ -1,0 +1,40 @@
+version: "2.1" # Especificamos la versión del archivo docker-compose
+services:
+  backend: # Servicio para el backend
+    container_name: demo_backend # Nombre del contenedor
+    build:
+      context: ./backend # Ruta del contexto de construcción del Dockerfile
+    environment:
+      - DEBUG=True # Variable de entorno para habilitar el modo debug
+
+  orders: # Servicio para el manejo de pedidos
+    container_name: demo_orders # Nombre del contenedor
+    build:
+      context: ./orders # Ruta del contexto de construcción del Dockerfile
+    environment:
+      - DEBUG=True # Variable de entorno para habilitar el modo debug
+
+  items: # Servicio para el manejo de ítems
+    container_name: demo_items # Nombre del contenedor
+    build:
+      context: ./items # Ruta del contexto de construcción del Dockerfile
+    environment:
+      - DEBUG=True # Variable de entorno para habilitar el modo debug
+
+  aggregate: # Servicio para la agregación de datos
+    container_name: demo_aggregate # Nombre del contenedor
+    build:
+      context: ./aggregate # Ruta del contexto de construcción del Dockerfile
+    environment:
+      - DEBUG=True # Variable de entorno para habilitar el modo debug
+
+  nginx: # Servicio para Nginx
+    container_name: demo_nginx # Nombre del contenedor
+    image: nginx:latest # Imagen de Nginx a utilizar
+    ports:
+      - "443:443" # Mapeo del puerto HTTPS del host al puerto HTTPS de Nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro # Montamos el archivo de configuración de Nginx
+      - ./certs:/etc/nginx/certs:ro # Montamos los certificados SSL
+    depends_on:
+      - backend # Aseguramos que el servicio backend esté corriendo antes de iniciar Nginx
